@@ -285,15 +285,21 @@ export default function Friends() {
             <div className="field">
               <label htmlFor="photo">Add a Photo (optional)</label>
               <input id="photo" type="file" accept="image/*" onChange={handlePhotoChange} />
+              <p style={{ fontSize: "12px" }}>
+  dont worry full picture will be shown to her. preview j being cock
+</p>
               {previewUrl && (
                 <div className="preview">
                   <img src={previewUrl} alt="Preview" />
+                  
                 </div>
+                
               )}
             </div>
 
             <div className="actions">
               <button type="submit" className="btn primary">Submit Wish</button>
+              <p style={{ fontSize: "12px" }}> please just tap/click once and see the response (1-5seconds depend on device)</p>
             </div>
           </form>
         </section>
