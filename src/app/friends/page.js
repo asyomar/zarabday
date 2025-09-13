@@ -171,8 +171,9 @@ export default function Friends() {
           <div className="modal">
             <h2 className="modal-title">✨ Purpose of This Page</h2>
             <p className="modal-text">
-              This is a birthday gift to <strong>Zara</strong>. Since it’s our last year of poly,
-              we’re creating a space to eternalise memories and connections through your wishes.
+              Hello! This is a birthday gift to <strong>Zara</strong>. Since it’s her last year of poly,
+              we are trying to create a space to eternalise memories and connections through your wishes.
+              So please, treat this like a year book, insert your wishes for her and put in a picture that relates to yall.
             </p>
             <button className="btn primary" onClick={handleCloseIntro}>
               I’m in — let’s start

@@ -22,8 +22,8 @@
   --bg: #f8f9fa;
   --fg: #000;
 
-  --header-h: 74px;
-  --footer-h: 80px;
+  --header-h: 90px;
+  --footer-h: 90px;
 
   --rail-w: 56px;
   --hole-size: 22px;
@@ -149,8 +149,8 @@ body {
     --rail-w: 44px;
     --hole-size: 18px;
 
-    --header-h: 74px;
-    --footer-h: 64px;
+    --header-h: 90px;
+    --footer-h: 90px;
 
     --side-pad: 12px;
     --title-ml: 12px;
