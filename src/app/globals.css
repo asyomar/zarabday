@@ -1,26 +1,170 @@
-@import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@font-face {
+  font-family: "Shooting Star";
+  src: url("/fonts/shootingstar.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: "Melon";
+  src: url("/fonts/melon.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+:root{
+  --bg: #f8f9fa;
+  --fg: #000;
+
+  --header-h: 74px;
+  --footer-h: 80px;
+
+  --rail-w: 56px;
+  --hole-size: 22px;
+
+  --page-max: 72rem;
+  --side-pad: 16px;
+  --title-ml: 32px;
+  --image-mr: 32px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+html, body { height: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.app-grid{
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr); /* minmax prevents overflow */
+  grid-template-rows: var(--header-h) 1fr var(--footer-h);
+  grid-template-areas:
+    "rail header"
+    "rail main"
+    "rail footer";
+  height: 100dvh;    /* mobile-safe viewport height */
+  width: 100%;
+  overflow: hidden;  /* only main scrolls */
+}
+
+/* ---------- Left rail (8 cells; 4 on small screens) ---------- */
+.grid-rail{
+  grid-area: rail;
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);   /* 8 holes on large screens */
+  align-items: center;                  /* center each hole cell vertically */
+  justify-items: center;                /* center horizontally */
+  width: 100%;
+  height: 100%;
+  box-shadow: inset -1px 0 0 rgba(0,0,0,0.06);
+  pointer-events: none; /* decorative */
+  opacity: 0.95;
+}
+
+.hole{
+  width: var(--hole-size);
+  height: var(--hole-size);
+  background-image: url("/paperhole.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+}
+
+.grid-header{
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: 0 var(--side-pad);
+  min-width: 0;
+  padding-top: 2rem;
+  padding-bottom: 1rem;
+}
+
+.header-title{
+  margin: 0 0 0 var(--title-ml);
+  font-size: 2rem;
+  line-height: 1.1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: "Shooting Star", sans-serif;
+}
+
+.header-actions{
+  margin-right: var(--image-mr);
+  flex: 0 0 auto;
+}
+
+/* ---------- Main row (scrolls) ---------- */
+.grid-main{
+  grid-area: main;
+  overflow-y: auto;   /* only middle scrolls */
+  overflow-x: hidden; /* avoid horizontal overflow */
+  min-width: 0;       /* allow shrink */
+}
+
+.content-inner{
+  max-width: var(--page-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem var(--side-pad);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Footer row ---------- */
+.grid-footer{
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0 var(--side-pad);
+  min-width: 0;
+}
+
+.footer-actions{ flex: 0 0 auto; }
+.footer-text{
+  margin: 0 var(--side-pad) 0 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 72vw; /* keep text from pushing layout wide */
+  font-family: "Melon", sans-serif;
+  max-height: 70px;
+
+}
+
+/* ---------- Responsive: small screens (≤ 480px) ---------- */
+@media (max-width: 480px){
+  :root{
+    --rail-w: 44px;
+    --hole-size: 18px;
+
+    --header-h: 74px;
+    --footer-h: 64px;
+
+    --side-pad: 12px;
+    --title-ml: 12px;
+    --image-mr: 12px;
+  }
+
+  /* Show only 4 holes: hide holes 5..8 and rebalance rows */
+  .grid-rail{
+    grid-template-rows: repeat(4, 1fr);
+  }
+  .grid-rail .hole:nth-child(n+5){
+    display: none;
+  }
+
+  .header-title{ font-size: 1.5rem; }
+  .footer-text{ max-width: 55vw; }
 }
