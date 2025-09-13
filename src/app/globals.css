@@ -87,8 +87,6 @@ body {
   gap: .5rem;
   padding: 0 var(--side-pad);
   min-width: 0;
-  padding-top: 2rem;
-  padding-bottom: 1rem;
 }
 
 .header-title{

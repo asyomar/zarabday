@@ -66,9 +66,44 @@
   .avatar-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
+/* Space between label and input/textarea */
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  margin-right: 10px;
+}
+
+/* Inputs + textareas nicer */
+.field input[type="text"],
+.field textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fff;
+}
+
+/* On focus */
+.field input[type="text"]:focus,
+.field textarea:focus {
+  border-color: #ff80ab; /* pink highlight */
+  box-shadow: 0 0 0 3px rgba(255, 128, 171, 0.3);
+}
+
+/* Make textarea look balanced */
+.field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+
 .field{
-    margin-top: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .preview {

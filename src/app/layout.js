@@ -5,6 +5,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="app-grid">
+        <audio autoPlay loop controls={false}>
+          <source src="/hujanMuda.mp3" type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
         {/* Left punch-hole column (8 cells; CSS hides 4 on small screens) */}
         <aside className="grid-rail" aria-hidden="true">
           <span className="hole" />

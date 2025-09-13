@@ -196,7 +196,7 @@ export default function Friends() {
       {/* Quiz (multi-question) */}
       {!showIntro && !blocked && !quizPassed && currentQuiz && (
         <section className="card">
-          <h3 className="section-title">Quick Quiz (security)</h3>
+          <h3 className="section-title">Quick Quiz (for security reasons lol)</h3>
           <form onSubmit={handleQuizSubmit} className="quiz-form">
             <label className="quiz-q">{currentQuiz.question}</label>
 
@@ -234,6 +234,10 @@ export default function Friends() {
       {!showIntro && !blocked && quizPassed && (
         <section className="card">
           <h3 className="section-title">Leave Your Wish 💌</h3>
+          <p>Your wishes will be shown to her altogether! so just choose a cute 
+            slyvian family mascot that suits your vibe, insert your name, insert your wishes for her
+            or for both of yall, add a photo about yourself or both of yall. please be niceee thanks
+          </p>
 
           {/* NEW: Avatar picker */}
           <div className="avatar-picker">
