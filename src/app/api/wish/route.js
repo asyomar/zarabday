@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import crypto from "crypto";
+import sharp from "sharp";
 
 export const runtime = "nodejs"; // needed for Buffer
 const ALLOWED_AVATARS = new Set(["slyv1", "slyv2", "slyv3", "slyv4", "slyv5", "slyv6"]);
@@ -138,28 +139,74 @@ if (dErr) {
 
     // ---- optional image upload ----
     let photo_path = null;
-    if (file && file.size > 0) {
-      if (!file.type?.startsWith("image/")) {
-        return NextResponse.json({ error: "Only images allowed" }, { status: 400 });
-      }
-      if (file.size > 3 * 1024 * 1024) {
-        return NextResponse.json({ error: "Max 3MB image" }, { status: 400 });
-      }
+if (file && file.size > 0) {
+  // allow larger incoming files; we’ll compress below
+  const MAX_INCOMING = 20 * 1024 * 1024; // 20MB
+  if (file.size > MAX_INCOMING) {
+    return NextResponse.json({ error: "Image too large (max 20MB)" }, { status: 400 });
+  }
 
-      const arrayBuf = await file.arrayBuffer();
-      const ext = (file.name?.split(".").pop() || "jpg").toLowerCase();
-      const key = `wishes/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const buf = Buffer.from(await file.arrayBuffer());
+  const mime = (file.type || "").toLowerCase();
 
-      const { error: upErr } = await supabaseAdmin.storage
-        .from("wishes")
-        .upload(key, Buffer.from(arrayBuf), {
-          contentType: file.type,
-          upsert: false,
-        });
-      if (upErr) return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  // Normalise/convert:
+  // - rotate() fixes iPhone EXIF orientation
+  // - resize() caps dimensions (adjust 1600 to taste)
+  // - convert HEIC/HEIF/etc. to JPEG
+  // - compress to stay small
+  let outBuf, outExt, outMime;
 
-      photo_path = key;
+  const pipeline = sharp(buf, { limitInputPixels: 64e6 }).rotate().resize({
+    width: 1600, // cap width; keeps aspect ratio
+    withoutEnlargement: true,
+  });
+
+  if (mime.includes("heic") || mime.includes("heif") || mime.includes("heif-sequence") || mime.includes("quicktime")) {
+    // iPhone live/HEIC → JPEG
+    outBuf = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+    outExt = "jpg";
+    outMime = "image/jpeg";
+  } else if (mime.includes("png")) {
+    // keep PNG if it has transparency; otherwise JPEG is smaller
+    // quick heuristic: try jpeg and keep smaller
+    const jpg = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+    const png = await sharp(buf).png({ compressionLevel: 8 }).toBuffer();
+    if (jpg.length <= png.length) {
+      outBuf = jpg; outExt = "jpg"; outMime = "image/jpeg";
+    } else {
+      outBuf = png; outExt = "png"; outMime = "image/png";
     }
+  } else if (mime.includes("webp")) {
+    outBuf = await pipeline.webp({ quality: 82 }).toBuffer();
+    outExt = "webp"; outMime = "image/webp";
+  } else {
+    // default to JPEG for jpg/jpeg or unknown image/*
+    outBuf = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+    outExt = "jpg"; outMime = "image/jpeg";
+  }
+
+  // final size guard (post-compression)
+  const MAX_STORED = 3 * 1024 * 1024; // 3MB
+  if (outBuf.length > MAX_STORED) {
+    // try a second pass lowering quality
+    const smaller = await sharp(outBuf).jpeg({ quality: 72, mozjpeg: true }).toBuffer();
+    if (smaller.length > MAX_STORED) {
+      return NextResponse.json({ error: "Image is too large after compression. Try a smaller photo." }, { status: 400 });
+    }
+    outBuf = smaller;
+    outExt = "jpg";
+    outMime = "image/jpeg";
+  }
+
+  const key = `${Date.now()}-${crypto.randomUUID()}.${outExt}`; // note: no 'wishes/' prefix
+  const { error: upErr } = await supabaseAdmin.storage
+    .from("wishes")
+    .upload(key, outBuf, { contentType: outMime, upsert: false });
+
+  if (upErr) return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+
+  photo_path = key; // store just the key
+}
 
     // ---- insert row ----
     const ua = request.headers.get("user-agent") || null;
