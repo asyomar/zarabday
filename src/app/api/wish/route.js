@@ -84,6 +84,8 @@ export async function POST(request) {
     const wish = String(form.get("wish") || "").trim();
     const file = form.get("photo"); // optional
     const avatar = String(form.get("avatar") || "").trim(); // NEW
+    console.log("test")
+    console.log(avatar)
 
     // ---- validation ----
     if (name.length < 1 || name.length > 60) {
@@ -138,37 +140,28 @@ if (dErr) {
     }
 
     // ---- optional image upload ----
-    let photo_path = null;
+let photo_path = null;
+let outBuf, outExt, outMime;  // <--- declare outside so you can log later if needed
+
 if (file && file.size > 0) {
-  // allow larger incoming files; we’ll compress below
   const MAX_INCOMING = 20 * 1024 * 1024; // 20MB
   if (file.size > MAX_INCOMING) {
     return NextResponse.json({ error: "Image too large (max 20MB)" }, { status: 400 });
   }
+  console.log("Incoming:", file?.name, file?.size, file?.type);
 
   const buf = Buffer.from(await file.arrayBuffer());
   const mime = (file.type || "").toLowerCase();
 
-  // Normalise/convert:
-  // - rotate() fixes iPhone EXIF orientation
-  // - resize() caps dimensions (adjust 1600 to taste)
-  // - convert HEIC/HEIF/etc. to JPEG
-  // - compress to stay small
-  let outBuf, outExt, outMime;
-
   const pipeline = sharp(buf, { limitInputPixels: 64e6 }).rotate().resize({
-    width: 1600, // cap width; keeps aspect ratio
+    width: 1600,
     withoutEnlargement: true,
   });
 
-  if (mime.includes("heic") || mime.includes("heif") || mime.includes("heif-sequence") || mime.includes("quicktime")) {
-    // iPhone live/HEIC → JPEG
+  if (mime.includes("heic") || mime.includes("heif") || mime.includes("quicktime")) {
     outBuf = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
-    outExt = "jpg";
-    outMime = "image/jpeg";
+    outExt = "jpg"; outMime = "image/jpeg";
   } else if (mime.includes("png")) {
-    // keep PNG if it has transparency; otherwise JPEG is smaller
-    // quick heuristic: try jpeg and keep smaller
     const jpg = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
     const png = await sharp(buf).png({ compressionLevel: 8 }).toBuffer();
     if (jpg.length <= png.length) {
@@ -180,32 +173,34 @@ if (file && file.size > 0) {
     outBuf = await pipeline.webp({ quality: 82 }).toBuffer();
     outExt = "webp"; outMime = "image/webp";
   } else {
-    // default to JPEG for jpg/jpeg or unknown image/*
     outBuf = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
     outExt = "jpg"; outMime = "image/jpeg";
   }
 
-  // final size guard (post-compression)
-  const MAX_STORED = 3 * 1024 * 1024; // 3MB
+  // final size guard
+  const MAX_STORED = 3 * 1024 * 1024;
   if (outBuf.length > MAX_STORED) {
-    // try a second pass lowering quality
     const smaller = await sharp(outBuf).jpeg({ quality: 72, mozjpeg: true }).toBuffer();
     if (smaller.length > MAX_STORED) {
       return NextResponse.json({ error: "Image is too large after compression. Try a smaller photo." }, { status: 400 });
     }
-    outBuf = smaller;
-    outExt = "jpg";
-    outMime = "image/jpeg";
+    outBuf = smaller; outExt = "jpg"; outMime = "image/jpeg";
   }
 
-  const key = `${Date.now()}-${crypto.randomUUID()}.${outExt}`; // note: no 'wishes/' prefix
+  const key = `${Date.now()}-${crypto.randomUUID()}.${outExt}`;
   const { error: upErr } = await supabaseAdmin.storage
     .from("wishes")
     .upload(key, outBuf, { contentType: outMime, upsert: false });
 
-  if (upErr) return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  if (upErr) {
+  console.error("Upload failed:", upErr);
+  return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+}
 
-  photo_path = key; // store just the key
+  photo_path = key;
+
+  // ✅ safe to log now
+  console.log("Output image:", { bytes: outBuf.length, ext: outExt, mime: outMime });
 }
 
     // ---- insert row ----
@@ -225,6 +220,30 @@ if (file && file.size > 0) {
   .select("id")          // force PostgREST to return error details if any
   .single();             // fail if multiple, helps surface issues
 
+  // at top of POST
+console.log("ENV OK?",
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+  !!process.env.SUPABASE_SERVICE_ROLE
+);
+
+// after formData:
+console.log("Incoming fields:", { name, wishLen: wish.length });
+console.log("File:", {
+  present: !!file,
+  name: file?.name,
+  size: file?.size,
+  type: file?.type
+});
+
+// around upload:
+console.time("image-process");
+// sharp pipeline
+console.timeEnd("image-process");
+
+// after supabase upload/insert:
+if (insErr) console.error("Insert failed:", insErr);
+
+
 if (insErr) {
   console.error("Insert error:", insErr);
   return NextResponse.json({ error: `Insert failed: ${insErr.message}` }, { status: 500 });
@@ -239,5 +258,6 @@ if (insErr) {
       headers: { "content-type": "application/json" },
     });
   }
+  
 
 }
